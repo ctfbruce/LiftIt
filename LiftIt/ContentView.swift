@@ -1,86 +1,73 @@
-//
-//  ContentView.swift
-//  LiftIt
-//
-//  Created by Theodor Mattli on 02.08.2025.
-//
-
 import SwiftUI
-import CoreData
 
+/// The root view of the application. Displays a tabbed interface with
+/// sections for exercises, templates, programs and workouts. Each
+/// tab hosts its own feature view. The environment's managed object
+/// context is injected from the app entry point in `LiftItApp`.
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
+    /// Tracks whether the app is currently in dark mode. Toggling this flag
+    /// updates the preferred colour scheme across all child views. The state
+    /// persists only for the current run; you could extend this to use
+    /// UserDefaults if you want persistence across launches.
+    @State private var isDarkMode: Bool = false
 
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
+        // Overlay the dark/light mode toggle in the bottom‑right corner to avoid
+        // overlapping navigation bar buttons. Use a ZStack to position it
+        // relative to the tab view.
+        ZStack(alignment: .bottomTrailing) {
+            TabView {
+                ExercisesView()
+                    .tabItem {
+                        Label("Exercises", systemImage: "list.bullet")
                     }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                TemplatesView()
+                    .tabItem {
+                        Label("Templates", systemImage: "rectangle.stack")
                     }
-                }
+                ProgramsView()
+                    .tabItem {
+                        Label("Programs", systemImage: "square.grid.2x2")
+                    }
+                WorkoutStartView()
+                    .tabItem {
+                        Label("Workout", systemImage: "figure.strengthtraining.traditional")
+                    }
+                WorkoutHistoryView()
+                    .tabItem {
+                        Label("History", systemImage: "clock.arrow.circlepath")
+                    }
+                // Remove the standalone Goals tab.  Goals are now managed
+                // within each program via the ProgramDetailTabsView.
+                StatsView()
+                    .tabItem {
+                        Label("Stats", systemImage: "chart.line.uptrend.xyaxis")
+                    }
             }
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            // Toggle button for light/dark mode. Positioned in the bottom right
+            // of the screen so it does not obstruct navigation bars or other
+            // UI elements. Tapping switches the colour scheme and updates
+            // the icon between sun and moon.
+            Button(action: { isDarkMode.toggle() }) {
+                Image(systemName: isDarkMode ? "sun.max.fill" : "moon.fill")
+                    .imageScale(.large)
+                    .padding(12)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Color(.systemBackground).opacity(0.8)))
             }
+            .foregroundColor(.primary)
+            .padding(.trailing, 20)
+            .padding(.bottom, 80)
         }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
+        // Apply the preferred colour scheme based on our state. When toggled,
+        // all child views adopt the chosen appearance regardless of system
+        // settings.
+        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
-
-#Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .environment(\.managedObjectContext, PersistenceController.shared.container.viewContext)
+    }
 }

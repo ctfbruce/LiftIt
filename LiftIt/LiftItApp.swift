@@ -2,7 +2,7 @@
 //  LiftItApp.swift
 //  LiftIt
 //
-//  Created by Theodor Mattli on 02.08.2025.
+//  Created by Theodor Mattli on 01.08.2025.
 //
 
 import SwiftUI
